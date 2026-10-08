@@ -17,14 +17,25 @@
   "build": {
     "appId": "id.sekolah.aplikasiujian",
     "productName": "Aplikasi Ujian",
-    "files": ["main.js", "preload.js", "exit.html", "config.json"],
+    "files": [
+      "main.js",
+      "preload.js",
+      "exit.html",
+      "config.json"
+    ],
     "win": {
-      "target": ["nsis", "portable"],
-      "artifactName": "AplikasiUjian-${version}-${target}.${ext}"
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "AplikasiUjian-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "AplikasiUjian-Portable-${version}.${ext}"
     }
   }
 }
