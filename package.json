@@ -1,0 +1,30 @@
+{
+  "name": "aplikasi-ujian",
+  "productName": "Aplikasi Ujian",
+  "version": "1.0.0",
+  "description": "Browser ujian terkunci untuk mengakses Portal Ujian Sekolah dan Google Form",
+  "main": "main.js",
+  "author": "Sekolah",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "id.sekolah.aplikasiujian",
+    "productName": "Aplikasi Ujian",
+    "files": ["main.js", "preload.js", "exit.html", "config.json"],
+    "win": {
+      "target": ["nsis", "portable"],
+      "artifactName": "AplikasiUjian-${version}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

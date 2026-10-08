@@ -1,0 +1,21 @@
+{
+  "startUrl": "https://wima15.github.io/ases/#siswa",
+  "exitPassword": "guru123",
+  "allowedHosts": [
+    "wima15.github.io",
+    "forms.gle",
+    "forms.google.com",
+    "docs.google.com",
+    "accounts.google.com",
+    "accounts.youtube.com",
+    "apis.google.com",
+    "ssl.gstatic.com",
+    "www.gstatic.com",
+    "www.google.com",
+    "drive.google.com",
+    "lh3.googleusercontent.com",
+    "fonts.googleapis.com",
+    "fonts.gstatic.com"
+  ],
+  "docsGooglePathPrefix": "/forms"
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<style>
+  body{font-family:Segoe UI,sans-serif;margin:0;padding:24px;background:#312e81;color:#fff}
+  h3{margin:0 0 12px}
+  input{width:100%;padding:10px;border-radius:8px;border:0;font-size:15px;box-sizing:border-box}
+  .row{display:flex;gap:8px;margin-top:14px}
+  button{flex:1;padding:10px;border:0;border-radius:8px;font-size:14px;cursor:pointer}
+  #ok{background:#fbbf24;font-weight:600}
+  #no{background:#e0e7ff}
+  #err{color:#fecaca;margin-top:8px;min-height:18px;font-size:13px}
+</style></head>
+<body>
+  <h3>Keluar dari Aplikasi Ujian</h3>
+  <input id="pw" type="password" placeholder="Kata sandi pengawas / guru" autofocus>
+  <div id="err"></div>
+  <div class="row"><button id="no">Batal</button><button id="ok">Keluar</button></div>
+<script>
+  const pw=document.getElementById('pw'),err=document.getElementById('err');
+  async function go(){
+    const ok=await exitApi.verify(pw.value);
+    if(!ok){err.textContent='Kata sandi salah.';pw.value='';pw.focus();}
+  }
+  document.getElementById('ok').onclick=go;
+  document.getElementById('no').onclick=()=>exitApi.cancel();
+  pw.addEventListener('keydown',e=>{if(e.key==='Enter')go();if(e.key==='Escape')exitApi.cancel();});
+</script></body></html>
