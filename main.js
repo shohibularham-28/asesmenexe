@@ -34,12 +34,17 @@ function neutralize() {
   return web.executeJavaScript(NEUTRALIZE_JS).catch(() => {});
 }
 
+// Keluarga domain Google (untuk alur login / pengalihan)
+const GOOGLE_FAMILY = /(^|\.)(google\.[a-z.]+|youtube\.com|gstatic\.com|googleusercontent\.com|googleapis\.com)$/;
+// Halaman di docs.google.com yang TIDAK boleh dibuka (selain Form & alur login)
+const DOCS_DENY = /^\/(a\/[^/]+\/)?(u\/\d+\/)?(document|spreadsheets|presentation|drawings|file|viewer|open)(\/|$)/;
+
 function isAllowed(urlString) {
   try {
     const u = new URL(urlString);
     if (u.protocol !== 'https:') return false;
     const h = u.hostname;
-    if (h === 'docs.google.com') return /^\/(a\/[^/]+\/)?forms/.test(u.pathname);
+    if (h === 'docs.google.com') return !DOCS_DENY.test(u.pathname);
     if (h === 'www.google.com') return /^\/(accounts|recaptcha)/.test(u.pathname);
     if (/^accounts\.google\.[a-z.]+$/.test(h)) return true; // accounts.google.com / .co.id / dll
     return config.allowedHosts.includes(h);
@@ -69,6 +74,15 @@ app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 let trustRedirects = false;
 function allowNav(url, isRedirect) {
   if (isAllowed(url)) return true;
+  if (isRedirect) {
+    try {
+      const u = new URL(url);
+      if (u.protocol === 'https:' && GOOGLE_FAMILY.test(u.hostname) &&
+          !(u.hostname === 'docs.google.com' && DOCS_DENY.test(u.pathname))) {
+        log('ALLOW google redirect', url); return true;
+      }
+    } catch {}
+  }
   if (config.trustPortalLinks && /^https:\/\//i.test(url)) {
     if (isRedirect) { if (trustRedirects) { log('ALLOW redirect', url); return true; } }
     else if (isOnPortal(web.getURL())) { trustRedirects = true; log('ALLOW dari portal', url); return true; }
