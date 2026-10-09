@@ -40,3 +40,8 @@ Untuk mencoba tanpa build: `npm start`
 - Alt+Tab dan tombol Windows tidak bisa diblokir total oleh aplikasi biasa; aplikasi hanya mendeteksi dan menegur.
   Untuk pengamanan lebih ketat, gunakan juga mode Kiosk/Assigned Access Windows.
 - Jika Google Form meminta file upload atau domain lain, tambahkan domainnya di `allowedHosts`.
+
+## Login Google
+Aplikasi menyamar sebagai Chrome biasa (tanpa tanda "Electron") supaya login Google tidak ditolak.
+Sesi login tersimpan (partition `persist:ujian`). Jika Google tetap menolak ("browser tidak aman"),
+cara paling andal adalah membuat Google Form **tidak mewajibkan login** (Setelan form → Respons → matikan "Batasi ke pengguna di ...").

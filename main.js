@@ -20,15 +20,41 @@ let violations = 0;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
+
+// Matikan peringatan "tinggalkan halaman?" milik halaman (Google Form) di dalam halaman itu sendiri,
+// supaya Back / Forward / Reload tidak tertahan.
+const NEUTRALIZE_JS = `(() => { try {
+  window.onbeforeunload = null;
+  Object.defineProperty(window, 'onbeforeunload', { configurable: true, get() { return null; }, set() {} });
+  if (!window.__ujianBU) { window.__ujianBU = 1;
+    window.addEventListener('beforeunload', (e) => { e.stopImmediatePropagation(); }, true); }
+} catch (e) {} })();`;
+function neutralize() {
+  if (!web || web.isDestroyed()) return Promise.resolve();
+  return web.executeJavaScript(NEUTRALIZE_JS).catch(() => {});
+}
+
 function isAllowed(urlString) {
   try {
     const u = new URL(urlString);
     if (u.protocol !== 'https:') return false;
-    if (!config.allowedHosts.includes(u.hostname)) return false;
-    if (u.hostname === 'docs.google.com' && !u.pathname.startsWith(config.docsGooglePathPrefix)) return false;
-    return true;
+    const h = u.hostname;
+    if (h === 'docs.google.com') return u.pathname.startsWith(config.docsGooglePathPrefix);
+    if (h === 'www.google.com') return /^\/(accounts|recaptcha)/.test(u.pathname);
+    if (/^accounts\.google\.[a-z.]+$/.test(h)) return true; // accounts.google.com / .co.id / dll
+    return config.allowedHosts.includes(h);
   } catch { return false; }
 }
+
+function isOnPortal(url) { return /^https:\/\/wima15\.github\.io\//.test(url || ''); }
+
+// Google menolak login dari "Electron": tampilkan sebagai Chrome biasa
+function cleanUA(ua) {
+  return ua
+    .replace(/\sElectron\/\S+/g, '')
+    .replace(/\s[^\s\/]+\/\d+\.\d+\.\d+(?=\sChrome\/)/, '');
+}
+app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 
 function toast(msg) {
   if (!web || web.isDestroyed()) return;
@@ -46,7 +72,7 @@ function toast(msg) {
 function sendNavState() {
   if (!web || web.isDestroyed() || !toolbarView || toolbarView.webContents.isDestroyed()) return;
   toolbarView.webContents.send('nav-state', {
-    canGoBack: web.navigationHistory.canGoBack(),
+    canGoBack: web.navigationHistory.canGoBack() || !isOnPortal(web.getURL()),
     canGoForward: web.navigationHistory.canGoForward(),
     loading: web.isLoading(),
     title: web.getTitle()
@@ -113,6 +139,10 @@ function createMain() {
   mainWin.on('enter-full-screen', layout);
   mainWin.on('show', layout);
 
+  const ua = cleanUA(web.getUserAgent());
+  web.setUserAgent(ua);
+  webView.webContents.session.setUserAgent(ua);
+  log('UA', ua);
   web.loadURL(config.startUrl);
 
   // PENTING: abaikan peringatan "tinggalkan halaman?" milik Google Form,
@@ -131,6 +161,8 @@ function createMain() {
     return { action: 'deny' };
   });
   web.on('context-menu', (e) => e.preventDefault());
+  ['dom-ready', 'did-finish-load', 'did-navigate-in-page', 'did-frame-finish-load']
+    .forEach((ev) => web.on(ev, neutralize));
 
   ['did-start-loading', 'did-stop-loading', 'did-navigate', 'did-navigate-in-page', 'page-title-updated']
     .forEach((ev) => web.on(ev, sendNavState));
@@ -177,13 +209,22 @@ async function goHome() {
   if (response === 0) web.loadURL(config.startUrl);
 }
 
-ipcMain.on('nav', (e, action) => {
+ipcMain.on('nav', async (e, action) => {
   if (!web || web.isDestroyed()) return;
-  if (action === 'back' && web.navigationHistory.canGoBack()) web.navigationHistory.goBack();
-  else if (action === 'forward' && web.navigationHistory.canGoForward()) web.navigationHistory.goForward();
-  else if (action === 'reload') web.reload();
-  else if (action === 'home') goHome();
-  else if (action === 'exit') openExitDialog();
+  const h = web.navigationHistory;
+  log('nav', action, '| url:', web.getURL(), '| canBack:', h.canGoBack(), '| canForward:', h.canGoForward());
+  if (action === 'home') { goHome(); return; }
+  if (action === 'exit') { openExitDialog(); return; }
+
+  await neutralize();
+  try {
+    if (action === 'back') {
+      if (h.canGoBack()) h.goBack();
+      else if (!isOnPortal(web.getURL())) web.loadURL(config.startUrl);
+    }
+    else if (action === 'forward' && h.canGoForward()) h.goForward();
+    else if (action === 'reload') web.reload();
+  } catch (err) { log('nav error', action, err && err.message); }
 });
 
 function openExitDialog() {
