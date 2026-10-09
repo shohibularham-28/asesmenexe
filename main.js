@@ -46,6 +46,14 @@ function isAllowed(urlString) {
   } catch { return false; }
 }
 
+
+// Kompatibel dengan berbagai versi Electron (navigationHistory.* baru ada di versi 32+)
+function hist() { return web.navigationHistory; }
+function canBack() { const h = hist(); return h && typeof h.canGoBack === 'function' ? h.canGoBack() : web.canGoBack(); }
+function canFwd()  { const h = hist(); return h && typeof h.canGoForward === 'function' ? h.canGoForward() : web.canGoForward(); }
+function doBack()  { const h = hist(); return h && typeof h.goBack === 'function' ? h.goBack() : web.goBack(); }
+function doFwd()   { const h = hist(); return h && typeof h.goForward === 'function' ? h.goForward() : web.goForward(); }
+
 function isOnPortal(url) { return /^https:\/\/wima15\.github\.io\//.test(url || ''); }
 
 // Google menolak login dari "Electron": tampilkan sebagai Chrome biasa
@@ -72,8 +80,8 @@ function toast(msg) {
 function sendNavState() {
   if (!web || web.isDestroyed() || !toolbarView || toolbarView.webContents.isDestroyed()) return;
   toolbarView.webContents.send('nav-state', {
-    canGoBack: web.navigationHistory.canGoBack() || !isOnPortal(web.getURL()),
-    canGoForward: web.navigationHistory.canGoForward(),
+    canGoBack: canBack() || !isOnPortal(web.getURL()),
+    canGoForward: canFwd(),
     loading: web.isLoading(),
     title: web.getTitle()
   });
@@ -143,7 +151,7 @@ function createMain() {
   web.setUserAgent(ua);
   webView.webContents.session.setUserAgent(ua);
   log('UA', ua);
-  web.loadURL(config.startUrl);
+  web.loadURL(config.startUrl).catch(() => {});
 
   // PENTING: abaikan peringatan "tinggalkan halaman?" milik Google Form,
   // kalau tidak, perpindahan halaman diam-diam dibatalkan.
@@ -156,7 +164,7 @@ function createMain() {
     if (!isAllowed(url)) { e.preventDefault(); toast('Pengalihan ke halaman luar diblokir.'); }
   });
   web.setWindowOpenHandler(({ url }) => {
-    if (isAllowed(url)) web.loadURL(url);
+    if (isAllowed(url)) web.loadURL(url).catch(() => {});
     else toast('Halaman ini tidak diizinkan saat ujian.');
     return { action: 'deny' };
   });
@@ -176,7 +184,7 @@ function createMain() {
       `<body style="font-family:Segoe UI;background:#312e81;color:#fff;display:grid;place-items:center;height:100vh;margin:0;text-align:center">
        <div><h2>Tidak dapat memuat halaman</h2><p>Periksa koneksi internet, lalu klik tombol di bawah.</p>
        <p style="opacity:.6;font-size:13px">Kode: ${code} (${safe})</p>
-       <button onclick="location.href='${config.startUrl}'" style="padding:10px 20px;border:0;border-radius:8px;font-size:15px;cursor:pointer">Coba lagi</button></div></body>`));
+       <button onclick="location.href='${config.startUrl}'" style="padding:10px 20px;border:0;border-radius:8px;font-size:15px;cursor:pointer">Coba lagi</button></div></body>`))
   });
 
   web.on('before-input-event', handleKeys);
@@ -206,24 +214,25 @@ async function goHome() {
     detail: 'Jawaban yang belum dikirim di Google Form bisa hilang.'
   });
   suppressBlur = false;
-  if (response === 0) web.loadURL(config.startUrl);
+  if (response === 0) web.loadURL(config.startUrl).catch(() => {});
 }
 
 ipcMain.on('nav', async (e, action) => {
   if (!web || web.isDestroyed()) return;
-  const h = web.navigationHistory;
-  log('nav', action, '| url:', web.getURL(), '| canBack:', h.canGoBack(), '| canForward:', h.canGoForward());
+  log('nav', action, '| url:', web.getURL(), '| canBack:', canBack(), '| canForward:', canFwd());
   if (action === 'home') { goHome(); return; }
   if (action === 'exit') { openExitDialog(); return; }
 
   await neutralize();
   try {
     if (action === 'back') {
-      if (h.canGoBack()) h.goBack();
-      else if (!isOnPortal(web.getURL())) web.loadURL(config.startUrl);
+      if (canBack()) doBack();
+      else if (!isOnPortal(web.getURL())) web.loadURL(config.startUrl).catch(() => {});
+    } else if (action === 'forward') {
+      if (canFwd()) doFwd();
+    } else if (action === 'reload') {
+      web.reload();
     }
-    else if (action === 'forward' && h.canGoForward()) h.goForward();
-    else if (action === 'reload') web.reload();
   } catch (err) { log('nav error', action, err && err.message); }
 });
 
