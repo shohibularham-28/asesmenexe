@@ -2,7 +2,16 @@ const { app, BrowserWindow, WebContentsView, ipcMain, Menu, dialog } = require('
 const path = require('path');
 const config = require('./config.json');
 
+const fs = require('fs');
 const TOOLBAR_H = 46;
+function log(...a) {
+  try {
+    const f = path.join(app.getPath('userData'), 'ujian-log.txt');
+    fs.appendFileSync(f, `[${new Date().toISOString()}] ${a.join(' ')}\n`);
+  } catch {}
+}
+process.on('uncaughtException', (err) => log('uncaughtException', err && err.stack));
+
 let mainWin = null, toolbarView = null, webView = null, web = null;
 let exitWin = null;
 let allowQuit = false;
@@ -82,7 +91,9 @@ function createMain() {
       contextIsolation: true, sandbox: true, devTools: false
     }
   });
-  toolbarView.webContents.loadFile('toolbar.html');
+  toolbarView.setBackgroundColor('#312e81');
+  toolbarView.webContents.loadFile(path.join(__dirname, 'toolbar.html'));
+  toolbarView.webContents.on('did-fail-load', (e, code, desc, url) => log('toolbar fail', code, desc, url));
 
   // --- Konten ujian (bawah)
   webView = new WebContentsView({
@@ -91,11 +102,13 @@ function createMain() {
       devTools: false, contextIsolation: true, sandbox: true, spellcheck: false
     }
   });
+  webView.setBackgroundColor('#312e81');
   web = webView.webContents;
 
   mainWin.contentView.addChildView(webView);
   mainWin.contentView.addChildView(toolbarView);
   layout();
+  [100, 400, 1000, 2500].forEach((t) => setTimeout(layout, t));
   mainWin.on('resize', layout);
   mainWin.on('enter-full-screen', layout);
   mainWin.on('show', layout);
@@ -121,13 +134,16 @@ function createMain() {
 
   ['did-start-loading', 'did-stop-loading', 'did-navigate', 'did-navigate-in-page', 'page-title-updated']
     .forEach((ev) => web.on(ev, sendNavState));
-  toolbarView.webContents.on('did-finish-load', sendNavState);
+  toolbarView.webContents.on('did-finish-load', () => { layout(); sendNavState(); });
 
   web.on('did-fail-load', (e, code, desc, url, isMain) => {
     if (!isMain || code === -3) return;
+    log('web fail', code, desc, url);
+    const safe = String(desc).replace(/[<>&]/g, '');
     web.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
       `<body style="font-family:Segoe UI;background:#312e81;color:#fff;display:grid;place-items:center;height:100vh;margin:0;text-align:center">
-       <div><h2>Tidak dapat terhubung ke internet</h2><p>Periksa koneksi, lalu klik tombol di bawah.</p>
+       <div><h2>Tidak dapat memuat halaman</h2><p>Periksa koneksi internet, lalu klik tombol di bawah.</p>
+       <p style="opacity:.6;font-size:13px">Kode: ${code} (${safe})</p>
        <button onclick="location.href='${config.startUrl}'" style="padding:10px 20px;border:0;border-radius:8px;font-size:15px;cursor:pointer">Coba lagi</button></div></body>`));
   });
 
@@ -178,7 +194,7 @@ function openExitDialog() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, devTools: false }
   });
   exitWin.setAlwaysOnTop(true, 'screen-saver');
-  exitWin.loadFile('exit.html');
+  exitWin.loadFile(path.join(__dirname, 'exit.html'));
   exitWin.on('closed', () => { exitWin = null; if (mainWin && !mainWin.isDestroyed()) mainWin.focus(); });
 }
 
