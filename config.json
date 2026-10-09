@@ -18,5 +18,6 @@
     "fonts.googleapis.com",
     "fonts.gstatic.com"
   ],
-  "docsGooglePathPrefix": "/forms"
+  "docsGooglePathPrefix": "/forms",
+  "trustPortalLinks": true
 }

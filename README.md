@@ -45,3 +45,9 @@ Untuk mencoba tanpa build: `npm start`
 Aplikasi menyamar sebagai Chrome biasa (tanpa tanda "Electron") supaya login Google tidak ditolak.
 Sesi login tersimpan (partition `persist:ujian`). Jika Google tetap menolak ("browser tidak aman"),
 cara paling andal adalah membuat Google Form **tidak mewajibkan login** (Setelan form → Respons → matikan "Batasi ke pengguna di ...").
+
+## Link dari Portal
+Link yang diklik dari halaman Portal selalu diizinkan (`trustPortalLinks: true` di config.json),
+termasuk pengalihan (redirect)-nya. Jadi guru cukup menaruh link ujian di Portal.
+Dari dalam halaman ujian, perpindahan ke domain lain tetap diblokir.
+Alamat yang diblokir tercatat di `%APPDATA%\Aplikasi Ujian\ujian-log.txt` (baris `BLOCKED`).

@@ -39,7 +39,7 @@ function isAllowed(urlString) {
     const u = new URL(urlString);
     if (u.protocol !== 'https:') return false;
     const h = u.hostname;
-    if (h === 'docs.google.com') return u.pathname.startsWith(config.docsGooglePathPrefix);
+    if (h === 'docs.google.com') return /^\/(a\/[^/]+\/)?forms/.test(u.pathname);
     if (h === 'www.google.com') return /^\/(accounts|recaptcha)/.test(u.pathname);
     if (/^accounts\.google\.[a-z.]+$/.test(h)) return true; // accounts.google.com / .co.id / dll
     return config.allowedHosts.includes(h);
@@ -54,7 +54,8 @@ function canFwd()  { const h = hist(); return h && typeof h.canGoForward === 'fu
 function doBack()  { const h = hist(); return h && typeof h.goBack === 'function' ? h.goBack() : web.goBack(); }
 function doFwd()   { const h = hist(); return h && typeof h.goForward === 'function' ? h.goForward() : web.goForward(); }
 
-function isOnPortal(url) { return /^https:\/\/wima15\.github\.io\//.test(url || ''); }
+const PORTAL_ORIGIN = new URL(config.startUrl).origin;
+function isOnPortal(url) { try { return new URL(url).origin === PORTAL_ORIGIN; } catch { return false; } }
 
 // Google menolak login dari "Electron": tampilkan sebagai Chrome biasa
 function cleanUA(ua) {
@@ -63,6 +64,20 @@ function cleanUA(ua) {
     .replace(/\s[^\s\/]+\/\d+\.\d+\.\d+(?=\sChrome\/)/, '');
 }
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+
+// Link yang diklik dari Portal dipercaya (portal dikelola guru); redirect-nya ikut diizinkan.
+let trustRedirects = false;
+function allowNav(url, isRedirect) {
+  if (isAllowed(url)) return true;
+  if (config.trustPortalLinks && /^https:\/\//i.test(url)) {
+    if (isRedirect) { if (trustRedirects) { log('ALLOW redirect', url); return true; } }
+    else if (isOnPortal(web.getURL())) { trustRedirects = true; log('ALLOW dari portal', url); return true; }
+  }
+  let host = ''; try { host = new URL(url).hostname; } catch {}
+  log('BLOCKED', url, '| dari:', web.getURL());
+  toast('Diblokir: ' + (host || 'halaman ini') + ' tidak diizinkan saat ujian.');
+  return false;
+}
 
 function toast(msg) {
   if (!web || web.isDestroyed()) return;
@@ -157,17 +172,14 @@ function createMain() {
   // kalau tidak, perpindahan halaman diam-diam dibatalkan.
   web.on('will-prevent-unload', (e) => e.preventDefault());
 
-  web.on('will-navigate', (e, url) => {
-    if (!isAllowed(url)) { e.preventDefault(); toast('Halaman ini tidak diizinkan saat ujian.'); }
-  });
-  web.on('will-redirect', (e, url) => {
-    if (!isAllowed(url)) { e.preventDefault(); toast('Pengalihan ke halaman luar diblokir.'); }
-  });
+  web.on('will-navigate', (e, url) => { if (!allowNav(url, false)) e.preventDefault(); });
+  web.on('will-redirect', (e, url) => { if (!allowNav(url, true)) e.preventDefault(); });
   web.setWindowOpenHandler(({ url }) => {
-    if (isAllowed(url)) web.loadURL(url).catch(() => {});
-    else toast('Halaman ini tidak diizinkan saat ujian.');
+    if (allowNav(url, false)) web.loadURL(url).catch(() => {});
     return { action: 'deny' };
   });
+  web.on('did-navigate', () => { trustRedirects = false; });
+  web.on('did-fail-load', () => { trustRedirects = false; });
   web.on('context-menu', (e) => e.preventDefault());
   ['dom-ready', 'did-finish-load', 'did-navigate-in-page', 'did-frame-finish-load']
     .forEach((ev) => web.on(ev, neutralize));
