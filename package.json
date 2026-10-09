@@ -20,6 +20,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "toolbar-preload.js",
+      "toolbar.html",
       "exit.html",
       "config.json"
     ],

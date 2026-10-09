@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;user-select:none}
+  body{display:flex;align-items:center;gap:6px;padding:0 10px;background:#312e81;color:#fff;font-family:"Segoe UI",sans-serif}
+  button{height:32px;min-width:38px;padding:0 12px;border:0;border-radius:8px;background:#4338ca;color:#fff;font-size:15px;cursor:pointer}
+  button:hover:not(:disabled){background:#6366f1}
+  button:disabled{opacity:.35;cursor:default}
+  #home{background:#fbbf24;color:#1e1b4b;font-weight:600;font-size:13px;margin-left:6px}
+  #home:hover{background:#fcd34d!important}
+  #title{flex:1;text-align:center;font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
+  #exit{background:#991b1b;font-size:13px}
+  #exit:hover{background:#dc2626!important}
+</style></head>
+<body>
+  <button id="back" title="Kembali" disabled>←</button>
+  <button id="forward" title="Maju" disabled>→</button>
+  <button id="reload" title="Muat ulang">⟳</button>
+  <button id="home" title="Kembali ke Portal Ujian">🏠 Portal</button>
+  <div id="title">Aplikasi Ujian</div>
+  <button id="exit" title="Keluar (Ctrl+Shift+Q)">Keluar</button>
+<script>
+  const $=id=>document.getElementById(id);
+  $('back').onclick=()=>nav.back();
+  $('forward').onclick=()=>nav.forward();
+  $('reload').onclick=()=>nav.reload();
+  $('home').onclick=()=>nav.home();
+  $('exit').onclick=()=>nav.exit();
+  nav.onState(s=>{
+    $('back').disabled=!s.canGoBack;
+    $('forward').disabled=!s.canGoForward;
+    $('title').textContent=(s.loading?'Memuat… ':'')+(s.title||'Aplikasi Ujian');
+  });
+</script></body></html>

@@ -9,7 +9,7 @@ lalu siswa memilih ujian yang tetap berupa **Google Form**.
 - Link `target=_blank` dibuka di jendela yang sama
 - Alt+Tab / pindah aplikasi terdeteksi: jendela dikembalikan + peringatan muncul
 - DevTools, klik kanan, Ctrl+W/N/T/P/S, F11/F12, Alt+F4 diblokir
-- Tombol "🏠 Portal" melayang untuk kembali ke daftar ujian
+- Toolbar: Back, Forward, Reload, Portal, dan Keluar
 - Login Google tersimpan selama sesi (tidak perlu login ulang tiap soal)
 - Keluar hanya lewat **Ctrl+Shift+Q** + kata sandi pengawas
 
